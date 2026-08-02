@@ -1,6 +1,6 @@
 # Dispatcher-AO
 
-My happy place is when I'm creating something.
+Powered By the AOLS kernel
 
 ## Overview
 Dispatcher-AO is an automated orchestration system designed for field service operations, streamlining workflows and runtime execution.
