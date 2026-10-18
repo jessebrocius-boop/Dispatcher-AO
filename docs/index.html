@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DISPATCHER — Operations Hub</title>
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: #1e293b;
+      --accent: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --status-active: #22c55e;
+      --status-pending: #eab308;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; }
+
+    /* Sidebar Navigation */
+    aside { width: 240px; background: #090d16; border-right: 1px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 2rem; }
+    .brand { font-size: 1.25rem; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+    .nav-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .nav-item { padding: 0.75rem 1rem; border-radius: 6px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    .nav-item.active, .nav-item:hover { background: var(--bg-card); color: var(--text-main); }
+
+    /* Main Operational Area */
+    main { flex: 1; padding: 2rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1.5rem; }
+    header { display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.5rem; }
+    .kernel-badge { background: #1e1b4b; color: #818cf8; border: 1px solid #3730a3; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-family: monospace; }
+
+    /* Grid Layout */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+    .card-title { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .card-value { font-size: 1.8rem; font-weight: 600; }
+
+    /* Dispatch Feed */
+    .table-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #141e2e; padding: 1rem; font-size: 0.85rem; color: var(--text-muted); }
+    td { padding: 1rem; border-top: 1px solid var(--border); font-size: 0.9rem; }
+    .status { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .status.active { background: rgba(34, 197, 94, 0.15); color: var(--status-active); }
+    .status.pending { background: rgba(234, 179, 8, 0.15); color: var(--status-pending); }
+  </style>
+</head>
+<body>
+
+  <aside>
+    <div class="brand">DISPATCHER</div>
+    <ul class="nav-list">
+      <li class="nav-item active">Live Queue</li>
+      <li class="nav-item">Field Technicians</li>
+      <li class="nav-item">AOLS Audit Log</li>
+      <li class="nav-item">Settings</li>
+    </ul>
+  </aside>
+
+  <main>
+    <header>
+      <h1>Operations Hub</h1>
+      <span class="kernel-badge">AOLS Kernel: Synced</span>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">Active Dispatches</div>
+        <div class="card-value">14</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Pending Routing</div>
+        <div class="card-value">3</div>
+      </div>
+      <div class="card">
+        <div class="card-title">System Execution Speed</div>
+        <div class="card-value">12ms</div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Dispatch ID</th>
+            <th>Location / Zone</th>
+            <th>Assigned Unit</th>
+            <th>Status</th>
+            <th>Ledger Proof</th>
+          </tr>
+        </thead>
+        <tbody id="dispatch-rows">
+          <tr>
+            <td><code>#DSP-9042</code></td>
+            <td>Sector 4 - Commercial</td>
+            <td>Tech Unit 08</td>
+            <td><span class="status active">In Transit</span></td>
+            <td><code>0x7f...8a12</code></td>
+          </tr>
+          <tr>
+            <td><code>#DSP-9043</code></td>
+            <td>Sector 1 - Residential</td>
+            <td>Unassigned</td>
+            <td><span class="status pending">Queued</span></td>
+            <td><code>0x3b...99f4</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+</body>
+</html>

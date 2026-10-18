@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DISPATCHER AO — Operations Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-main: #0a0d12;
+            --panel-bg: #121824;
+            --border-color: #1e293b;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+        }
+        body {
+            background-color: var(--bg-main);
+            color: #e2e8f0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-xs">
+
+    <!-- TOP TELEMETRY BAR -->
+    <header class="border-b border-slate-800 bg-slate-950 px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <span class="font-bold tracking-widest text-cyan-500 text-sm">DISPATCHER // AO</span>
+            <span class="bg-cyan-950 text-cyan-400 border border-cyan-800/50 px-2 py-0.5 rounded text-[10px]">KERNEL V1.0.4</span>
+            <span class="text-slate-500">|</span>
+            <span class="text-slate-400">STATE: <span class="text-emerald-400">SYNCHRONIZED</span></span>
+        </div>
+        <div class="flex items-center space-x-6 text-slate-400">
+            <div>TICKS: <span id="tick-counter" class="text-slate-200">049281</span></div>
+            <div>LATENCY: <span class="text-emerald-400">12ms</span></div>
+            <div>ACTIVE UNITS: <span id="unit-count" class="text-cyan-400">4 / 4</span></div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTROL MATRIX -->
+    <main class="flex-1 grid grid-cols-12 gap-2 p-2 overflow-hidden">
+
+        <!-- LEFT PANEL: FLEET & UNIT TELEMETRY -->
+        <section class="col-span-3 border border-slate-800 rounded bg-slate-900/50 flex flex-col overflow-hidden">
+            <div class="p-2 border-b border-slate-800 bg-slate-900 font-semibold text-slate-300 flex justify-between">
+                <span>UNIT REGISTRY</span>
+                <span class="text-slate-500">AOLS-BOUND</span>
+            </div>
+            <div id="unit-list" class="p-2 space-y-2 overflow-y-auto custom-scrollbar flex-1">
+                <!-- Unit Card 1 -->
+                <div class="border border-slate-800 bg-slate-950 p-2 rounded hover:border-cyan-500/50 cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-cyan-400">UNIT-01 (FIELD)</span>
+                        <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.2 rounded text-[9px]">READY</span>
+                    </div>
+                    <div class="text-slate-400 grid grid-cols-2 gap-1">
+                        <div>LOC: 36.1699, -115.1398</div>
+                        <div>LOAD: 12%</div>
+                    </div>
+                </div>
+                <!-- Unit Card 2 -->
+                <div class="border border-slate-800 bg-slate-950 p-2 rounded hover:border-cyan-500/50 cursor-pointer">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-300">UNIT-02 (TRANSIT)</span>
+                        <span class="bg-amber-950 text-amber-400 border border-amber-800 px-1.5 py-0.2 rounded text-[9px]">EN ROUTE</span>
+                    </div>
+                    <div class="text-slate-400 grid grid-cols-2 gap-1">
+                        <div>LOC: 36.1147, -115.1728</div>
+                        <div>LOAD: 68%</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENTER PANEL: MAP / SPATIAL CANVAS & QUEUE -->
+        <section class="col-span-6 flex flex-col space-y-2 overflow-hidden">
+            <!-- Spatial Visualization Window -->
+            <div class="flex-1 border border-slate-800 rounded bg-slate-950 relative overflow-hidden flex items-center justify-center">
+                <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+                <div class="text-center z-10">
+                    <div class="text-slate-600 mb-1">[ SPATIAL GRID MATRIX ]</div>
+                    <div class="text-slate-400">Node Syncing active via Antigravity Engine</div>
+                </div>
+                <!-- Tactical Overlay Indicators -->
+                <div class="absolute bottom-2 left-2 bg-slate-900/80 border border-slate-800 px-2 py-1 rounded text-[10px] text-slate-400">
+                    BOUNDS: REGION-NV-SOUTH
+                </div>
+            </div>
+
+            <!-- ACTIVE DISPATCH QUEUE -->
+            <div class="h-48 border border-slate-800 rounded bg-slate-900/50 flex flex-col overflow-hidden">
+                <div class="p-2 border-b border-slate-800 bg-slate-900 font-semibold text-slate-300 flex justify-between">
+                    <span>PENDING DISPATCH QUEUE</span>
+                    <button class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded transition">
+                        + MANUAL DISPATCH
+                    </button>
+                </div>
+                <div class="p-2 overflow-y-auto custom-scrollbar flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-500 border-b border-slate-800">
+                                <th class="pb-1">ID</th>
+                                <th class="pb-1">TARGET</th>
+                                <th class="pb-1">PRIORITY</th>
+                                <th class="pb-1">ASSIGNED</th>
+                                <th class="pb-1">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50 text-slate-300">
+                            <tr>
+                                <td class="py-1.5 font-bold text-cyan-400">#DSP-8821</td>
+                                <td>SITE ALPHA</td>
+                                <td><span class="text-red-400">HIGH</span></td>
+                                <td>UNIT-01</td>
+                                <td><button class="text-cyan-400 hover:underline">EXECUTE</button></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 font-bold text-cyan-400">#DSP-8822</td>
+                                <td>SUB-STATION 4</td>
+                                <td><span class="text-amber-400">MED</span></td>
+                                <td>UNASSIGNED</td>
+                                <td><button class="text-cyan-400 hover:underline">ASSIGN</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT PANEL: EVENT STREAM & LEDGER AUDIT -->
+        <section class="col-span-3 border border-slate-800 rounded bg-slate-900/50 flex flex-col overflow-hidden">
+            <div class="p-2 border-b border-slate-800 bg-slate-900 font-semibold text-slate-300 flex justify-between">
+                <span>SYSTEM LOG STREAM</span>
+                <span class="text-emerald-500 font-mono">● LIVE</span>
+            </div>
+            <div id="log-stream" class="p-2 space-y-1.5 font-mono text-[10px] overflow-y-auto custom-scrollbar flex-1 bg-slate-950">
+                <div class="text-slate-500">[09:36:01] AOLS_INIT: Kernel integrity verified.</div>
+                <div class="text-slate-400">[09:36:04] UNIT-01 telemetry frame received.</div>
+                <div class="text-amber-400/90">[09:36:10] QUEUE_UPDATE: Item #DSP-8822 registered.</div>
+                <div class="text-cyan-400">[09:36:12] ANTIGRAVITY: Linked via GitHub local pipeline.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER STATUS -->
+    <footer class="border-t border-slate-800 bg-slate-950 px-4 py-1 flex justify-between text-slate-500 text-[10px]">
+        <div>REPO: jessebrocius-boop/Dispatcher-AO</div>
+        <div>NASCENT LABS & TECHNOLOGIES</div>
+    </footer>
+
+</body>
+</html>
