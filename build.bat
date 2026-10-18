@@ -19,7 +19,8 @@ echo [ENV] Initializing MSVC environment via: %VSVARS%
 call "%VSVARS%" x64
 
 echo [BUILD] Initializing Dispatcher AO MSVC build sequence...
-cl /O2 /std:c++17 /openmp:experimental /I include src\scheduler_kernel.cpp tests\test_modulation.cpp /Fe:dispatcher_node.exe
+rem Compile only the scheduler kernel (exclude test_modulation which also defines main)
+cl /O2 /std:c++17 /openmp:experimental /EHsc /I include src\scheduler_kernel.cpp /Fe:dispatcher_node.exe
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed.
     exit /b %errorlevel%
