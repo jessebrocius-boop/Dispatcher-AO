@@ -1,0 +1,6 @@
+@echo off
+echo [BUILD] Initializing Dispatcher AO MSVC build sequence...
+cl /O2 /std:c++17 /openmp:experimental /I include src\scheduler_kernel.cpp tests\test_modulation.cpp /Fe:dispatcher_node.exe
+if %errorlevel% neq 0 exit /b %errorlevel%
+echo [SUCCESS] Build completed. Running executable...
+.\dispatcher_node.exe
