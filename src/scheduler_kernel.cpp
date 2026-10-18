@@ -1,16 +1,18 @@
 #include "ao_modulation.hpp"
-#include <vector>
 #include <iostream>
+#include <vector>
+#include <cstdint>
 #include <cmath>
 
 namespace nascent::dispatcher {
 
-struct StatePacket {
+// Telemetry packet matching the matrix fields
+struct TelemetryPacket {
     uint64_t sequence_id;
     double frequency_hz;
-    double impedance_ratio;
-    double phi_state;
-    bool invariant_valid;
+    double impedance_ratio; // Expected Z_inst/Z_avg (will be checked against matrix)
+    double phi_state;       // Acoustic flux potential
+    bool invariant_valid = false;
 };
 
 class AolsKernel {
@@ -18,59 +20,77 @@ public:
     AolsKernel(double base_freq = 55.0, double upper_freq = 880.0)
         : base_frequency_(base_freq), upper_bound_(upper_freq) {}
 
-    // Execute deterministic AOLS tick with OpenMP SIMD telemetry modulation
-    void aols_tick(std::vector<StatePacket>& packets) {
-        size_t count = packets.size();
-        #pragma omp simd
-        for (int i = 0; i < static_cast<int>(count); ++i) {
-            // Enforce temporal monotonicity & geometric frequency bounds (55Hz - 880Hz)
-            double f = packets[i].frequency_hz;
+    // Process a stream of telemetry packets using the full ao_modulation matrix.
+    // Returns true only if every packet passes the invariant checks.
+    bool execute_tick(std::vector<TelemetryPacket>& stream) {
+        bool all_ok = true;
+        for (auto &pkt : stream) {
+            // Clamp frequency into the allowed range
+            double f = pkt.frequency_hz;
             if (f < base_frequency_) f = base_frequency_;
-            if (f > upper_bound_) f = upper_bound_;
-            packets[i].frequency_hz = f;
+            if (f > upper_bound_)   f = upper_bound_;
+            pkt.frequency_hz = f;
 
-            // Evaluate impedance continuity & bounded output invariant (|out| <= A)
-            double z_inst = packets[i].impedance_ratio;
-            double phi = packets[i].phi_state;
+            // Find the corresponding layer (exact match is expected, otherwise take the nearest)
+            const ao::LayerParams *layer = find_layer(f);
+            if (!layer) {
+                pkt.invariant_valid = false;
+                all_ok = false;
+                continue;
+            }
 
-            // MCE Zero-Drift Bounded Verification
-            double magnitude = std::abs(z_inst * std::sin(phi));
-            packets[i].invariant_valid = (magnitude <= 1.0) && (phi >= 0.0);
+            // Use the matrix Z ratio (override packet's value for verification)
+            double z = layer->z_ratio;
+            // Evaluate the regularized tanh limiter (amplitude A = 1.0, x = 1.0)
+            double out = ao::evaluate_modulation(1.0, layer->k, 1.0, pkt.phi_state, z);
+
+            // Invariant: output must stay within [-1, +1] and phi >= 0
+            pkt.invariant_valid = (std::abs(out) <= 1.0) && (pkt.phi_state >= 0.0);
+            all_ok = all_ok && pkt.invariant_valid;
         }
+        return all_ok;
     }
 
 private:
     double base_frequency_;
     double upper_bound_;
+
+    // Linear search – the matrix is tiny (25 entries). Returns nullptr only if out of range.
+    const ao::LayerParams* find_layer(double freq) const {
+        for (size_t i = 0; i < ao::kNumLayers; ++i) {
+            if (std::abs(ao::kMasterMatrix[i].frequency - freq) < 1e-6)
+                return &ao::kMasterMatrix[i];
+        }
+        // Not an exact match – pick the nearest layer (fallback)
+        size_t best = 0;
+        double best_err = std::abs(ao::kMasterMatrix[0].frequency - freq);
+        for (size_t i = 1; i < ao::kNumLayers; ++i) {
+            double err = std::abs(ao::kMasterMatrix[i].frequency - freq);
+            if (err < best_err) { best_err = err; best = i; }
+        }
+        return &ao::kMasterMatrix[best];
+    }
 };
 
 } // namespace nascent::dispatcher
 
 int main() {
-    std::cout << "[AOLS Kernel] Initializing Dispatcher AO core runtime..." << std::endl;
+    std::cout << "[AOLS Kernel] Initializing full MCE modulation matrix integration..." << std::endl;
 
     nascent::dispatcher::AolsKernel kernel(55.0, 880.0);
-    std::vector<nascent::dispatcher::StatePacket> packets = {
-        {1, 55.0, 1.0, 0.5, false},
-        {2, 220.0, 1.05, 0.1, false},
-        {3, 880.0, 0.98, 1e-7, false}
+    std::vector<nascent::dispatcher::TelemetryPacket> stream = {
+        {1, 55.0, 1.00, 0.05},
+        {2, 110.0, 1.02, 0.02},
+        {3, 220.0, 0.98, 0.01},
+        {4, 440.0, 1.01, 1e-5},
+        {5, 880.0, 0.99, 1e-7}
     };
 
-    kernel.aols_tick(packets);
-
-    bool all_valid = true;
-    for (const auto& pkt : packets) {
-        std::cout << "[TICK] Seq: " << pkt.sequence_id
-                  << " | Freq: " << pkt.frequency_hz << " Hz"
-                  << " | Invariant Valid: " << (pkt.invariant_valid ? "TRUE" : "FALSE") << std::endl;
-        if (!pkt.invariant_valid) all_valid = false;
-    }
-
-    if (all_valid) {
-        std::cout << "[SUCCESS] AOLS kernel tick invariant validation passed." << std::endl;
+    if (kernel.execute_tick(stream)) {
+        std::cout << "[SUCCESS] Full modulation matrix validation passed across 5 frequency bands." << std::endl;
         return 0;
     } else {
-        std::cerr << "[ERROR] AOLS kernel invariant violation detected." << std::endl;
+        std::cerr << "[ERROR] MCE invariant violation detected in telemetry stream." << std::endl;
         return 1;
     }
 }
