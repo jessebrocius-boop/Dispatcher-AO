@@ -24,7 +24,7 @@ public:
     // Returns true only if every packet passes the invariant checks.
     bool execute_tick(std::vector<TelemetryPacket>& stream) {
         bool all_ok = true;
-        for (auto &pkt : stream) {
+        for (auto& pkt : stream) {
             // Clamp frequency into the allowed range
             double f = pkt.frequency_hz;
             if (f < base_frequency_) f = base_frequency_;
@@ -32,7 +32,7 @@ public:
             pkt.frequency_hz = f;
 
             // Find the corresponding layer (exact match is expected, otherwise take the nearest)
-            const ao::LayerParams *layer = find_layer(f);
+            const DispatcherAO::LayerConfig* layer = find_layer(f);
             if (!layer) {
                 pkt.invariant_valid = false;
                 all_ok = false;
@@ -41,8 +41,11 @@ public:
 
             // Use the matrix Z ratio (override packet's value for verification)
             double z = layer->z_ratio;
+            // Compute wavenumber k = 2π * f / sound_speed
+            constexpr double pi = 3.14159265358979323846;
+            double k = 2.0 * pi * f / DispatcherAO::kSoundSpeed;
             // Evaluate the regularized tanh limiter (amplitude A = 1.0, x = 1.0)
-            double out = ao::evaluate_modulation(1.0, layer->k, 1.0, pkt.phi_state, z);
+            double out = DispatcherAO::evaluate_modulation(1.0, k, 1.0, pkt.phi_state, z);
 
             // Invariant: output must stay within [-1, +1] and phi >= 0
             pkt.invariant_valid = (std::abs(out) <= 1.0) && (pkt.phi_state >= 0.0);
@@ -56,19 +59,19 @@ private:
     double upper_bound_;
 
     // Linear search – the matrix is tiny (25 entries). Returns nullptr only if out of range.
-    const ao::LayerParams* find_layer(double freq) const {
-        for (size_t i = 0; i < ao::kNumLayers; ++i) {
-            if (std::abs(ao::kMasterMatrix[i].frequency - freq) < 1e-6)
-                return &ao::kMasterMatrix[i];
+    const DispatcherAO::LayerConfig* find_layer(double freq) const {
+        for (size_t i = 0; i < DispatcherAO::kNumLayers; ++i) {
+            if (std::abs(DispatcherAO::kMasterMatrix[i].frequency - freq) < 1e-6)
+                return &DispatcherAO::kMasterMatrix[i];
         }
         // Not an exact match – pick the nearest layer (fallback)
         size_t best = 0;
-        double best_err = std::abs(ao::kMasterMatrix[0].frequency - freq);
-        for (size_t i = 1; i < ao::kNumLayers; ++i) {
-            double err = std::abs(ao::kMasterMatrix[i].frequency - freq);
+        double best_err = std::abs(DispatcherAO::kMasterMatrix[0].frequency - freq);
+        for (size_t i = 1; i < DispatcherAO::kNumLayers; ++i) {
+            double err = std::abs(DispatcherAO::kMasterMatrix[i].frequency - freq);
             if (err < best_err) { best_err = err; best = i; }
         }
-        return &ao::kMasterMatrix[best];
+        return &DispatcherAO::kMasterMatrix[best];
     }
 };
 
