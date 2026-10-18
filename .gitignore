@@ -1,0 +1,3 @@
+*.exe
+*.obj
+test_build.log
